@@ -260,13 +260,14 @@ def main():
 
     # RIGHT CONTROLS
     fullyIncludedDigits = [5,6,7,8,9]
-    pinnedDigits = [0,1,2,3,4]
+    # pinnedDigits = [0,1,2,3,4]
+    pinnedDigits = []
     pinnedRate = 0.01
     pinnedCount = 1
     pinFile = 'results/pin_set.pkl'
-    # train_loader_right = load_Right_TrainData(batch_size_train, fullyIncludedDigits, pinnedDigits,pinnedRate)
+    train_loader_right = load_Right_TrainData(batch_size_train, fullyIncludedDigits, pinnedDigits,pinnedRate)
     # train_loader_right = load_Right_TrainData_avg(batch_size_train, fullyIncludedDigits, pinnedDigits, pinnedCount)
-    train_loader_right = load_Right_salientPins(batch_size_train, fullyIncludedDigits, pinnedCount, pinFile)
+    # train_loader_right = load_Right_salientPins(batch_size_train, fullyIncludedDigits, pinnedCount, pinFile)
 
     test_loader = loadTestData(batch_size_test)
 
