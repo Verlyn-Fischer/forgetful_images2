@@ -20,3 +20,12 @@ def plotAccuracy(correct_calls,incorrect_calls):
     plt.title('Predictions')
     plt.xlabel('Digit')
     plt.show()
+
+def plotHist(annotated_reps):
+    sequence = [[],[],[],[],[]]
+    for item in annotated_reps:
+        sequence[item[0]].append(item[1])
+    # (tag,distance,source)
+    plt.hist(sequence,bins=60,histtype='step')
+    plt.legend(['0','1','2','3','4'])
+    plt.show()

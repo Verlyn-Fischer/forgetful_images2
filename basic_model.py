@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import monitoring_util as mu
 import random
+import pickle
 
 def plotGroundTruth(test_loader):
     examples = enumerate(test_loader)
@@ -134,6 +135,67 @@ def load_Right_TrainData(batch_size_train,fullyIncludedDigits,pinnedDigits,pinne
                                                sampler=subsetSampler_right)
     return train_loader
 
+def load_Right_TrainData_avg(batch_size_train, includedDigits, pinnedDigits, pinnedCount):
+
+    average_images = [None,None,None,None,None,None,None,None,None]
+    image_count = [0,0,0,0,0,0,0,0,0,0]
+
+    left_set_indices = []
+    dataset = torchvision.datasets.MNIST('mnist_data', train=True, download=True,
+                                         transform=torchvision.transforms.Compose([
+                                             torchvision.transforms.ToTensor(),
+                                             torchvision.transforms.Normalize(
+                                                 (0.1307,), (0.3081,))
+                                         ]))
+
+    averaged_dataset = []
+    for idx in range(len(dataset)):
+        item = dataset[idx]
+        if item[1] in includedDigits:
+            averaged_dataset.append(item)
+        elif item[1] in pinnedDigits:
+            image_count[item[1]] += 1
+            if average_images[item[1]] is None:
+                average_images[item[1]] = item[0]
+            else:
+                average_images[item[1]] = average_images[item[1]] + item[0]
+
+    for idx in range(len(average_images)):
+        if average_images[idx] is not None:
+            avg_image = average_images[idx] / image_count[idx]
+            for iteration in range(pinnedCount):
+                averaged_dataset.append((avg_image,idx))
+
+    train_loader = torch.utils.data.DataLoader(averaged_dataset, batch_size=batch_size_train, shuffle=True)
+    return train_loader
+
+def load_Right_salientPins(batch_size_train, fullyIncludedDigits, pinnedCount, pinnedFile):
+
+    dataset_new = []
+
+    dataset = torchvision.datasets.MNIST('mnist_data', train=True, download=True,
+                                         transform=torchvision.transforms.Compose([
+                                             torchvision.transforms.ToTensor(),
+                                             torchvision.transforms.Normalize(
+                                                 (0.1307,), (0.3081,))
+                                         ]))
+
+    for idx in range(len(dataset)):
+        item = dataset[idx]
+        if item[1] in fullyIncludedDigits:
+            dataset_new.append((item[0],item[1]))
+
+    with open(pinnedFile, 'rb') as pickleFile:
+        pinnedSet = pickle.load(pickleFile)
+
+    for pin in pinnedSet:
+        for count in range(pinnedCount):
+            dataset_new.append(pin)
+
+    train_loader = torch.utils.data.DataLoader(dataset_new, batch_size=batch_size_train, shuffle=True)
+
+    return train_loader
+
 def load_Right_TrainData_OLD(batch_size_train,fullyIncludedDigits,pinnedDigits):
     ##### TRAIN ############
 
@@ -182,7 +244,7 @@ def main():
     learning_rate = 0.01
     momentum = 0.5
     log_interval = 10
-    experiment = 'Pin_DualSequence2'
+    experiment = 'Pin_cluster2'
 
     network = Net()
     optimizer = optim.SGD(network.parameters(), lr=learning_rate,
@@ -193,27 +255,39 @@ def main():
     torch.manual_seed(random_seed)
 
     # LEFT CONTROLS
-    includedDigits_left = [0,1,2,3,4]
-    train_loader_left = load_Left_TrainData(batch_size_train, includedDigits_left)
+    # includedDigits_left = [0,1,2,3,4]
+    # train_loader_left = load_Left_TrainData(batch_size_train, includedDigits_left)
 
     # RIGHT CONTROLS
     fullyIncludedDigits = [5,6,7,8,9]
     pinnedDigits = [0,1,2,3,4]
     pinnedRate = 0.01
-    train_loader_right = load_Right_TrainData(batch_size_train, fullyIncludedDigits, pinnedDigits,pinnedRate)
+    pinnedCount = 1
+    pinFile = 'results/pin_set.pkl'
+    # train_loader_right = load_Right_TrainData(batch_size_train, fullyIncludedDigits, pinnedDigits,pinnedRate)
+    # train_loader_right = load_Right_TrainData_avg(batch_size_train, fullyIncludedDigits, pinnedDigits, pinnedCount)
+    train_loader_right = load_Right_salientPins(batch_size_train, fullyIncludedDigits, pinnedCount, pinFile)
 
     test_loader = loadTestData(batch_size_test)
 
     # SEQUENCES
+
     # No Training
-    test(test_loader,network)
+    # test(test_loader,network)
+
     # Left Training
-    for epoch in range(1, n_epochs + 1):
-        train(epoch, log_interval, train_loader_left, experiment, network, optimizer)
+    # for epoch in range(1, n_epochs + 1):
+    #     train(epoch, log_interval, train_loader_left, experiment, network, optimizer)
+    # test(test_loader, network)
+    # torch.save(network.state_dict(), 'results/model_left.pth')
+
+    # Right Training
+    model_path = 'results/model_left.pth'
+    network.load_state_dict(torch.load(model_path))
     test(test_loader, network)
-    # # Right Training
     for epoch in range(1, n_epochs + 1):
         train(epoch, log_interval, train_loader_right, experiment, network, optimizer)
     test(test_loader, network)
+    torch.save(network.state_dict(), 'results/model_right.pth')
 
 main()
