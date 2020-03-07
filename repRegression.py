@@ -4,10 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 import torchvision
-import salient_images as si
 
-X = np.array([[1, 1], [1, 2], [2, 2], [2, 3]])
-y = np.array([[1, 1], [1, 2], [2, 2], [2, 3]])
 
 class Net(nn.Module):
     def __init__(self):
